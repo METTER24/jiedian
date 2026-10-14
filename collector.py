@@ -168,13 +168,13 @@ print("================")
 # 保存全部节点
 
 with open(
-    "nodes.txt",
+    filename,
     "w",
     encoding="utf-8"
 ) as f:
 
     f.write(
-        "\n".join(nodes)
+        "\n".join(selected)
     )
 
 
@@ -247,16 +247,17 @@ def make_sub(node_list):
 
 # 生成全部订阅
 
+# 生成全部订阅
+
 with open(
-    "sub.txt",
+    filename,
     "w",
     encoding="utf-8"
 ) as f:
 
     f.write(
-        make_sub(nodes)
+        "\n".join(selected)
     )
-
 
 
 # 生成地区订阅
