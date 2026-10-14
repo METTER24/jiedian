@@ -5,7 +5,7 @@ on:
 
   schedule:
 
-    # 每0.5小时更新
+    # 每30分钟运行一次
 
     - cron: "*/30 * * * *"
 
@@ -16,7 +16,14 @@ on:
 
 jobs:
 
+
   build:
+
+
+    permissions:
+
+      contents: write
+
 
 
     runs-on:
@@ -24,60 +31,57 @@ jobs:
       ubuntu-latest
 
 
+
     steps:
 
 
-    - name: 下载代码
+      - name: 下载代码
 
-      uses:
-
-        actions/checkout@v4
+        uses: actions/checkout@v4
 
 
 
-    - name: 安装Python
+      - name: 安装Python
 
-      uses:
+        uses: actions/setup-python@v5
 
-        actions/setup-python@v5
+        with:
 
-      with:
-
-        python-version: "3.x"
+          python-version: "3.x"
 
 
 
-    - name: 安装依赖
+      - name: 安装依赖
 
-      run:
+        run: |
 
-        pip install requests
-
-
-
-    - name: 抓取节点
-
-      run:
-
-        python collector.py
+          pip install requests
 
 
 
-    - name: 保存更新
+      - name: 抓取节点
+
+        run: |
+
+          python collector.py
 
 
-      run: |
+
+      - name: 保存更新
+
+        run: |
 
 
-        git config user.name github-actions
-
-        git config user.email github-actions@github.com
+          git config user.name github-actions
 
 
-        git add .
+          git config user.email github-actions@github.com
 
 
-        git commit -m "auto update" || exit 0
+          git add .
 
 
-        git push
+          git commit -m "auto update nodes" || exit 0
+
+
+          git push
