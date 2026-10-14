@@ -1,43 +1,212 @@
 name: Auto Node Pool
 
+
 on:
+
   schedule:
+
+    # 每30分钟运行一次
     - cron: "*/30 * * * *"
+
+
   workflow_dispatch:
 
+
+
 permissions:
+
   contents: write
 
+
+
 jobs:
+
+
   update:
+
+
     runs-on: ubuntu-latest
 
+
+
     steps:
+
+
+
+      # ======================
+      # 拉取代码
+      # ======================
+
       - name: Checkout
+
         uses: actions/checkout@v4
 
+
+
+
+      # ======================
+      # Python环境
+      # ======================
+
       - name: Setup Python
+
         uses: actions/setup-python@v5
+
         with:
+
           python-version: "3.12"
 
+
+
+
+      # ======================
+      # 安装依赖
+      # ======================
+
       - name: Install dependencies
-        run: pip install requests
+
+        run: |
+
+          pip install requests
+
+
+
+
+
+      # ======================
+      # 抓取节点
+      # ======================
 
       - name: Collect nodes
-        run: python collector.py
+
+        run: |
+
+          python collector.py
+
+
+
+
+
+      # ======================
+      # 检测TCP存活
+      # ======================
 
       - name: Check nodes
-        run: python checker.py
+
+        run: |
+
+          python checker.py
+
+
+
+
+
+      # ======================
+      # 延迟测速排序
+      # ======================
+
+      - name: Speed test nodes
+
+        run: |
+
+          python speedtest.py
+
+
+
+
+
+      # ======================
+      # 生成订阅
+      # ======================
 
       - name: Generate subscription
-        run: python generator.py
+
+        run: |
+
+          python generator.py
+
+
+
+
+
+      # ======================
+      # 查看生成结果
+      # ======================
+
+      - name: Check output files
+
+        run: |
+
+          echo "====== 文件列表 ======"
+
+          ls -lh
+
+
+          echo ""
+
+          echo "====== 节点数量 ======"
+
+
+          echo "nodes:"
+          wc -l nodes.txt || true
+
+
+          echo "alive:"
+          wc -l alive_nodes.txt || true
+
+
+          echo "best:"
+          wc -l best_nodes.txt || true
+
+
+          echo "sub:"
+          wc -l sub.txt || true
+
+
+
+
+
+      # ======================
+      # 提交更新
+      # ======================
 
       - name: Save update
+
         run: |
+
+
           git config user.name "github-actions[bot]"
+
+
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add nodes.txt alive_nodes.txt sub.txt hk.txt tw.txt us.txt
+
+
+
+          git add \
+
+          nodes.txt \
+
+          alive_nodes.txt \
+
+          best_nodes.txt \
+
+          sub.txt \
+
+          hk.txt \
+
+          tw.txt \
+
+          us.txt
+
+
+
+
           git commit -m "auto update nodes" || exit 0
+
+
+
           git pull --rebase origin main
+
+
+
           git push origin HEAD:main
