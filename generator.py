@@ -1,7 +1,7 @@
 import base64
 
 
-INPUT="alive_nodes.txt"
+INPUT="best_nodes.txt"
 
 
 
