@@ -149,17 +149,13 @@ for url in SOURCES:
     )
 
 
-# 去重
-
-all_nodes=list(
-    set(all_nodes)
-)
+# 去重，保持顺序
+all_nodes = list(dict.fromkeys(all_nodes))
 
 
 print(
-    "抓取完成:",
-    len(all_nodes),
-    "个节点"
+    "总节点:",
+    len(all_nodes)
 )
 
 
