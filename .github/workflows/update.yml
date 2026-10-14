@@ -1,91 +1,43 @@
 name: Auto Node Pool
 
 on:
-
   schedule:
     - cron: "*/30 * * * *"
-
   workflow_dispatch:
 
+permissions:
+  contents: write
 
 jobs:
-
   update:
-
     runs-on: ubuntu-latest
 
-
-    permissions:
-
-      contents: write
-
-
     steps:
-
-
       - name: Checkout
-
         uses: actions/checkout@v4
 
-        with:
-
-          fetch-depth: 0
-
-
-
       - name: Setup Python
-
         uses: actions/setup-python@v5
-
         with:
-
           python-version: "3.12"
 
-
-
       - name: Install dependencies
+        run: pip install requests
 
-        run:
-
-          pip install requests
-
-
-
-        - name: Collect nodes
-
-        run:
-
-          python collector.py
-
-
+      - name: Collect nodes
+        run: python collector.py
 
       - name: Check nodes
-
-        run:
-
-          python checker.py
-
-
+        run: python checker.py
 
       - name: Generate subscription
-
-        run:
-
-          python generator.py
-
+        run: python generator.py
 
       - name: Save update
-
-        run:
-
-          git config user.name github-actions
-
-          git config user.email github-actions@github.com
-
-          git add .
-
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nodes.txt alive_nodes.txt sub.txt hk.txt tw.txt us.txt
           git commit -m "auto update nodes" || exit 0
-
-          git pull --rebase
-
-          git push
+          git pull --rebase origin main
+          git push origin HEAD:main
