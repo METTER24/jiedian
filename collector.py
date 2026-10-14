@@ -70,17 +70,32 @@ def decode_base64(text):
 
     try:
 
-        return base64.b64decode(
-            text+"==="
+        text=text.strip()
 
+        missing=len(text)%4
+
+        if missing:
+
+            text += "="*(4-missing)
+
+
+        return base64.b64decode(
+            text
         ).decode(
+            "utf-8",
             errors="ignore"
         )
 
+
     except:
 
-        return text
+        return ""
+这样很多：
 
+vmess://
+vless://
+ss://
+trojan://
 
 
 def extract_nodes(text):
@@ -142,10 +157,10 @@ all_nodes=list(
 
 
 print(
-    "总节点:",
-    len(all_nodes)
+    "抓取完成:",
+    len(all_nodes),
+    "个节点"
 )
-
 
 
 # 保存原始节点
