@@ -9,31 +9,23 @@ import re
 
 SOURCES = [
 
-    # free-nodes
     "https://raw.githubusercontent.com/free-nodes/v2rayfree/main/sub",
 
-    # aiboboxx
     "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
 
     "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2raysub",
 
-
-    # NoMoreWalls
     "https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/list_raw.txt",
 
-
-    # Free servers
     "https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
 
-
-    # V2RayAggregator
     "https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt",
 
 ]
 
 
 # ==========================
-# 下载订阅
+# 下载
 # ==========================
 
 def download(url):
@@ -42,9 +34,9 @@ def download(url):
 
         print("正在抓取:", url)
 
-        r=requests.get(
+        r = requests.get(
             url,
-            timeout=15,
+            timeout=20,
             headers={
                 "User-Agent":"Mozilla/5.0"
             }
@@ -57,7 +49,7 @@ def download(url):
 
     except Exception as e:
 
-        print("失败:",e)
+        print("失败:", e)
 
 
     return ""
@@ -65,7 +57,7 @@ def download(url):
 
 
 # ==========================
-# Base64解码
+# Base64 解码
 # ==========================
 
 def decode_base64(text):
@@ -100,9 +92,7 @@ def extract(text):
     result=[]
 
 
-    # 尝试解码
-
-    text=text+"\n"+decode_base64(text)
+    text = text + "\n" + decode_base64(text)
 
 
     rules=[
@@ -133,7 +123,7 @@ def extract(text):
 
 
 # ==========================
-# 主程序
+# 抓取节点
 # ==========================
 
 
@@ -142,9 +132,12 @@ nodes=[]
 
 for source in SOURCES:
 
+
     data=download(source)
 
+
     if data:
+
 
         nodes.extend(
             extract(data)
@@ -152,7 +145,7 @@ for source in SOURCES:
 
 
 
-# 去重 保留顺序
+# 去重
 
 nodes=list(
     dict.fromkeys(nodes)
@@ -165,16 +158,37 @@ print("节点数量:",len(nodes))
 print("================")
 
 
+
+# ==========================
 # 保存全部节点
+# ==========================
+
 
 with open(
-    filename,
+    "nodes.txt",
     "w",
     encoding="utf-8"
 ) as f:
 
     f.write(
-        "\n".join(selected)
+        "\n".join(nodes)
+    )
+
+
+
+# ==========================
+# 生成全部订阅
+# ==========================
+
+
+with open(
+    "sub.txt",
+    "w",
+    encoding="utf-8"
+) as f:
+
+    f.write(
+        "\n".join(nodes)
     )
 
 
@@ -184,7 +198,7 @@ with open(
 # ==========================
 
 
-regions = {
+regions={
 
 
     "hk.txt":[
@@ -199,6 +213,7 @@ regions = {
     ],
 
 
+
     "tw.txt":[
 
         "TW",
@@ -210,6 +225,7 @@ regions = {
         "🇹🇼"
 
     ],
+
 
 
     "us.txt":[
@@ -233,36 +249,13 @@ regions = {
 
 
 
-def make_sub(node_list):
 
-
-    data="\n".join(node_list)
-
-
-    return base64.b64encode(
-        data.encode()
-    ).decode()
-
-
-
-# 生成全部订阅
-
-# 生成全部订阅
-
-with open(
-    filename,
-    "w",
-    encoding="utf-8"
-) as f:
-
-    f.write(
-        "\n".join(selected)
-    )
-
-
+# ==========================
 # 生成地区订阅
+# ==========================
 
-for filename, keys in regions.items():
+
+for filename, keywords in regions.items():
 
 
     selected=[]
@@ -271,7 +264,7 @@ for filename, keys in regions.items():
     for node in nodes:
 
 
-        for key in keys:
+        for key in keywords:
 
 
             if key.lower() in node.lower():
@@ -287,6 +280,7 @@ for filename, keys in regions.items():
     )
 
 
+
     with open(
         filename,
         "w",
@@ -294,8 +288,9 @@ for filename, keys in regions.items():
     ) as f:
 
         f.write(
-            make_sub(selected)
+            "\n".join(selected)
         )
+
 
 
     print(
@@ -306,4 +301,6 @@ for filename, keys in regions.items():
 
 
 
+print("================")
 print("全部订阅生成完成")
+print("================")
