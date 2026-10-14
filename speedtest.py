@@ -1,6 +1,9 @@
 import socket
 import time
+import base64
+import json
 import concurrent.futures
+from urllib.parse import urlsplit, unquote
 
 
 INPUT = "alive_nodes.txt"
@@ -9,17 +12,69 @@ OUTPUT = "best_nodes.txt"
 TIMEOUT = 3
 MAX_WORKERS = 100
 
+# 保留最快多少个节点
+MAX_RESULTS = 200
+
+
 
 def get_host_port(node):
 
     try:
 
+        node = unquote(node)
+
+
+        # =====================
+        # VMess
+        # =====================
+
         if node.startswith("vmess://"):
 
-            return None, None
+            data = node.replace(
+                "vmess://",
+                ""
+            )
+
+            data += "=" * (
+                (4 - len(data) % 4) % 4
+            )
 
 
-        # vless / trojan
+            raw = base64.urlsafe_b64decode(
+                data
+            )
+
+
+            info = json.loads(
+                raw.decode(
+                    "utf-8",
+                    errors="ignore"
+                )
+            )
+
+
+            host = (
+                info.get("add")
+                or info.get("host")
+            )
+
+
+            port = info.get("port")
+
+
+            if host and port:
+
+                return (
+                    host,
+                    int(port)
+                )
+
+
+
+        # =====================
+        # VLESS / Trojan
+        # =====================
+
         if node.startswith(
             (
                 "vless://",
@@ -27,46 +82,141 @@ def get_host_port(node):
             )
         ):
 
-            from urllib.parse import urlsplit
-
-            p=urlsplit(node)
-
-            return (
-                p.hostname,
-                p.port
-            )
+            parsed = urlsplit(node)
 
 
-        # ss
+            if parsed.hostname and parsed.port:
+
+                return (
+                    parsed.hostname,
+                    parsed.port
+                )
+
+
+
+        # =====================
+        # Shadowsocks
+        # =====================
+
         if node.startswith("ss://"):
 
-            return None,None
+            return parse_ss(node)
 
 
-    except:
+
+    except Exception:
 
         pass
 
 
-    return None,None
+
+    return None, None
 
 
 
-def test(node):
 
-    host,port=get_host_port(node)
+def parse_ss(node):
+
+    try:
+
+        body = (
+            node[5:]
+            .split("#")[0]
+            .split("?")[0]
+        )
+
+
+        # 新格式
+
+        if "@" in body:
+
+
+            server = body.rsplit(
+                "@",
+                1
+            )[1]
+
+
+            parsed = urlsplit(
+                "//" + server
+            )
+
+
+            if parsed.hostname and parsed.port:
+
+                return (
+                    parsed.hostname,
+                    parsed.port
+                )
+
+
+
+        # 老格式
+
+        body += "=" * (
+            (4 - len(body) % 4) % 4
+        )
+
+
+        decoded = base64.urlsafe_b64decode(
+            body
+        ).decode(
+            "utf-8",
+            errors="ignore"
+        )
+
+
+        if "@" in decoded:
+
+
+            server = decoded.rsplit(
+                "@",
+                1
+            )[1]
+
+
+            host, port = server.rsplit(
+                ":",
+                1
+            )
+
+
+            return (
+                host,
+                int(port)
+            )
+
+
+
+    except Exception:
+
+        pass
+
+
+
+    return None, None
+
+
+
+
+def test_node(node):
+
+    host, port = get_host_port(node)
 
 
     if not host or not port:
+
         return None
+
 
 
     try:
 
-        start=time.time()
+
+        start = time.time()
 
 
-        s=socket.create_connection(
+        sock = socket.create_connection(
             (
                 host,
                 port
@@ -75,11 +225,12 @@ def test(node):
         )
 
 
-        s.close()
+        sock.close()
 
 
-        delay=int(
-            (time.time()-start)*1000
+        delay = int(
+            (time.time() - start)
+            * 1000
         )
 
 
@@ -89,25 +240,52 @@ def test(node):
         )
 
 
-    except:
+
+    except Exception:
 
         return None
+
+
 
 
 
 def main():
 
 
-    with open(
-        INPUT,
-        encoding="utf-8"
-    ) as f:
+    try:
 
-        nodes=[
-            x.strip()
-            for x in f
-            if x.strip()
-        ]
+        with open(
+            INPUT,
+            encoding="utf-8"
+        ) as f:
+
+
+            nodes = list(
+                dict.fromkeys(
+                    line.strip()
+                    for line in f
+                    if line.strip()
+                )
+            )
+
+
+    except FileNotFoundError:
+
+
+        print(
+            "找不到",
+            INPUT
+        )
+
+
+        open(
+            OUTPUT,
+            "w"
+        ).close()
+
+
+        return
+
 
 
 
@@ -117,34 +295,45 @@ def main():
     )
 
 
-    result=[]
+
+    results = []
+
 
 
     with concurrent.futures.ThreadPoolExecutor(
-        MAX_WORKERS
+        max_workers=MAX_WORKERS
     ) as pool:
 
 
-        for r in pool.map(
-            test,
+        for result in pool.map(
+            test_node,
             nodes
         ):
 
-            if r:
-                result.append(r)
+
+            if result:
+
+                results.append(
+                    result
+                )
 
 
 
-    # 按延迟排序
 
-    result.sort(
+    # 延迟排序
+
+    results.sort(
         key=lambda x:x[0]
     )
 
 
-    # 保留前200
 
-    result=result[:200]
+    # 保留最快节点
+
+    results = results[
+        :MAX_RESULTS
+    ]
+
 
 
     with open(
@@ -154,30 +343,45 @@ def main():
     ) as f:
 
 
-        for delay,node in result:
+        for delay,node in results:
 
             f.write(
-                node+"\n"
+                node + "\n"
             )
 
 
 
+
     print(
-        "优质节点:",
-        len(result)
+        "测速完成"
     )
 
 
-    if result:
+    print(
+        "有效节点:",
+        len(results)
+    )
+
+
+
+    if results:
 
         print(
-            "最快:",
-            result[0][0],
+            "最快延迟:",
+            results[0][0],
             "ms"
+        )
+
+    else:
+
+        print(
+            "没有找到可用节点"
         )
 
 
 
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
 
     main()
