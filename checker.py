@@ -1,26 +1,20 @@
 import socket
 import re
+import base64
+import json
 import concurrent.futures
 
 
 INPUT = "nodes.txt"
-
 OUTPUT = "alive_nodes.txt"
 
 
 
-# 提取服务器地址和端口
-
-def parse_node(node):
+def get_host_port(node):
 
     try:
 
-        # vmess base64解码
-
         if node.startswith("vmess://"):
-
-            import base64
-            import json
 
             data=node.replace(
                 "vmess://",
@@ -33,20 +27,16 @@ def parse_node(node):
                 base64.b64decode(data).decode()
             )
 
-
             return (
                 info.get("add"),
                 int(info.get("port"))
             )
 
 
-        # vless trojan ss 简单解析
-
         match=re.search(
             r"@([^:/]+):(\d+)",
             node
         )
-
 
         if match:
 
@@ -58,7 +48,7 @@ def parse_node(node):
 
     except:
 
-        pass
+        return None,None
 
 
     return None,None
@@ -66,7 +56,15 @@ def parse_node(node):
 
 
 
-def check(host,port):
+def check(node):
+
+    host,port=get_host_port(node)
+
+
+    if not host or not port:
+
+        return None
+
 
     try:
 
@@ -80,82 +78,54 @@ def check(host,port):
 
         s.close()
 
-        return True
+        return node
 
 
     except:
 
-        return False
+        return None
 
 
-
-
-# 读取节点
 
 
 with open(
     INPUT,
-    "r",
     encoding="utf-8"
 ) as f:
 
     nodes=[
         x.strip()
-        for x in f.readlines()
+        for x in f
         if x.strip()
     ]
+
+
+
+print(
+    "检测节点:",
+    len(nodes)
+)
 
 
 
 alive=[]
 
 
-
-print(
-    "开始检测节点:",
-    len(nodes)
-)
-
-
-
-def worker(node):
-
-    host,port=parse_node(node)
-
-
-    if host and port:
-
-        if check(host,port):
-
-            return node
-
-
-    return None
-
-
-
-
 with concurrent.futures.ThreadPoolExecutor(
     max_workers=100
-) as executor:
+) as pool:
 
 
-    results=executor.map(
-        worker,
-        nodes
-    )
+    for result in pool.map(check,nodes):
 
+        if result:
 
-    for r in results:
-
-        if r:
-
-            alive.append(r)
+            alive.append(result)
 
 
 
 print(
-    "可用节点:",
+    "有效节点:",
     len(alive)
 )
 
