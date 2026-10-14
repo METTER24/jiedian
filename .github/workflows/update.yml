@@ -171,42 +171,16 @@ jobs:
       # ======================
 
       - name: Save update
-
         run: |
-
 
           git config user.name "github-actions[bot]"
 
-
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-
-
-          git add \
-
-          nodes.txt \
-
-          alive_nodes.txt \
-
-          best_nodes.txt \
-
-          sub.txt \
-
-          hk.txt \
-
-          tw.txt \
-
-          us.txt
-
-
-
+          git add nodes.txt alive_nodes.txt best_nodes.txt sub.txt hk.txt tw.txt us.txt
 
           git commit -m "auto update nodes" || exit 0
 
-
-
           git pull --rebase origin main
-
-
 
           git push origin HEAD:main
