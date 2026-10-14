@@ -51,12 +51,27 @@ jobs:
 
 
 
-      - name: Collect nodes
+        - name: Collect nodes
 
         run:
 
           python collector.py
 
+
+
+      - name: Check nodes
+
+        run:
+
+          python checker.py
+
+
+
+      - name: Generate subscription
+
+        run:
+
+          python generator.py
 
 
       - name: Save update
