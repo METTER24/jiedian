@@ -1,87 +1,108 @@
-name: Update Nodes
+name: Auto Node Pool
 
 
 on:
 
   schedule:
 
-    # 每30分钟运行一次
-
+    # 每30分钟运行
     - cron: "*/30 * * * *"
 
 
   workflow_dispatch:
 
 
-
 jobs:
 
 
-  build:
+ update:
 
 
-    permissions:
-
-      contents: write
-
+  runs-on:
+    ubuntu-latest
 
 
-    runs-on:
+  permissions:
 
-      ubuntu-latest
-
-
-
-    steps:
+    contents:
+      write
 
 
-      - name: 下载代码
-
-        uses: actions/checkout@v4
+  steps:
 
 
+  - name:
+      Checkout
 
-      - name: 安装Python
-
-        uses: actions/setup-python@v5
-
-        with:
-
-          python-version: "3.x"
+    uses:
+      actions/checkout@v4
 
 
 
-      - name: 安装依赖
+  - name:
+      Setup Python
 
-        run: |
+    uses:
+      actions/setup-python@v5
 
-          pip install requests
+    with:
 
-
-
-      - name: 抓取节点
-
-        run: |
-
-          python collector.py
+      python-version:
+        "3.12"
 
 
 
-      - name: 保存更新
+  - name:
+      Install
 
-        run: |
+    run:
 
-
-          git config user.name github-actions
-
-
-          git config user.email github-actions@github.com
+      pip install -r requirements.txt
 
 
-          git add .
+
+  - name:
+      Download nodes
+
+    run:
+
+      python scripts/fetch.py
 
 
-          git commit -m "auto update nodes" || exit 0
+
+  - name:
+      Filter nodes
+
+    run:
+
+      python scripts/filter.py
 
 
-          git push
+
+  - name:
+      Generate
+
+    run:
+
+      python scripts/generate.py
+
+
+
+  - name:
+      Save
+
+    run:
+
+
+      git config user.name github-actions
+
+      git config user.email github-actions@github.com
+
+
+      git add .
+
+
+      git commit -m "auto update" || exit 0
+
+
+      git push
