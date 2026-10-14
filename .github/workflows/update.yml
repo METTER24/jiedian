@@ -7,7 +7,7 @@ on:
 
     # 每0.5小时更新
 
-    - cron: "0 */0.5 * * *"
+    - cron: "*/30 * * * *"
 
 
   workflow_dispatch:
