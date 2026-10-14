@@ -7,16 +7,38 @@ import time
 # 多个公开订阅源
 SOURCES = [
 
-    # v2rayfree
-    "https://raw.githubusercontent.com/free-nodes/v2rayfree/main/sub",
+# free-nodes
 
-    # 其他公开订阅示例
-    "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
+"https://raw.githubusercontent.com/free-nodes/v2rayfree/main/sub",
 
-    "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2raysub",
+
+# aiboboxx
+
+"https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
+
+"https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2raysub",
+
+
+# nodefree
+
+"https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt",
+
+
+# clash订阅合集
+
+"https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/list_raw.txt",
+
+
+# Pawdroid
+
+"https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
+
+
+# 其他公开源
+
+"https://raw.githubusercontent.com/learnhard-cn/free_proxy_ss/main/v2ray",
 
 ]
-
 
 def get_source(url):
 
