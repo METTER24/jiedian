@@ -5,9 +5,9 @@ on:
 
   schedule:
 
-    # 每6小时更新
+    # 每0.5小时更新
 
-    - cron: "0 */6 * * *"
+    - cron: "0 */0.5 * * *"
 
 
   workflow_dispatch:
