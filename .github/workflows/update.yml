@@ -63,7 +63,7 @@ jobs:
         git config user.email github-actions@github.com
 
 
-        git add nodes.txt sub.txt
+        git add .
 
 
         git commit -m "auto update nodes" || exit 0
