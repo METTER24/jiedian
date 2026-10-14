@@ -3,7 +3,6 @@ name: Auto Node Pool
 on:
 
   schedule:
-    # 每30分钟自动运行
     - cron: "*/30 * * * *"
 
   workflow_dispatch:
@@ -15,58 +14,63 @@ jobs:
 
     runs-on: ubuntu-latest
 
+
     permissions:
+
       contents: write
 
 
     steps:
 
 
-    - name: Checkout
+      - name: Checkout
 
-      uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
+        with:
 
-
-    - name: Setup Python
-
-      uses: actions/setup-python@v5
-
-      with:
-
-        python-version: "3.12"
+          fetch-depth: 0
 
 
 
-    - name: Install dependencies
+      - name: Setup Python
 
-      run:
+        uses: actions/setup-python@v5
 
-        pip install requests
+        with:
 
-
-
-    - name: Collect nodes
-
-      run:
-
-        python collector.py
+          python-version: "3.12"
 
 
 
-    - name: Save update
+      - name: Install dependencies
 
-      run:
+        run:
 
-        git config user.name github-actions
-
-        git config user.email github-actions@github.com
+          pip install requests
 
 
-        git add .
+
+      - name: Collect nodes
+
+        run:
+
+          python collector.py
 
 
-        git commit -m "auto update nodes" || exit 0
 
+      - name: Save update
 
-        git push
+        run:
+
+          git config user.name github-actions
+
+          git config user.email github-actions@github.com
+
+          git add .
+
+          git commit -m "auto update nodes" || exit 0
+
+          git pull --rebase
+
+          git push
