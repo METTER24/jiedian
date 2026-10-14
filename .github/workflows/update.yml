@@ -5,7 +5,7 @@ on:
 
   schedule:
 
-    # 每30分钟运行一次
+    # 每30分钟自动运行
     - cron: "*/30 * * * *"
 
 
@@ -32,10 +32,9 @@ jobs:
     steps:
 
 
-
-      # ======================
-      # 拉取代码
-      # ======================
+      # ==========================
+      # 拉取仓库
+      # ==========================
 
       - name: Checkout
 
@@ -44,9 +43,9 @@ jobs:
 
 
 
-      # ======================
+      # ==========================
       # Python环境
-      # ======================
+      # ==========================
 
       - name: Setup Python
 
@@ -59,23 +58,42 @@ jobs:
 
 
 
-      # ======================
-      # 安装依赖
-      # ======================
+      # ==========================
+      # 安装Python依赖
+      # ==========================
 
       - name: Install dependencies
 
         run: |
 
-          pip install requests
+          pip install requests pysocks
+
+
+
+
+      # ==========================
+      # 安装 sing-box
+      # ==========================
+
+      - name: Install sing-box
+
+        run: |
+
+          wget -q https://github.com/SagerNet/sing-box/releases/download/v1.11.8/sing-box-1.11.8-linux-amd64.tar.gz
+
+          tar -xf sing-box-1.11.8-linux-amd64.tar.gz
+
+          sudo mv sing-box-1.11.8-linux-amd64/sing-box /usr/local/bin/sing-box
+
+          sing-box version
 
 
 
 
 
-      # ======================
+      # ==========================
       # 抓取节点
-      # ======================
+      # ==========================
 
       - name: Collect nodes
 
@@ -87,9 +105,9 @@ jobs:
 
 
 
-      # ======================
-      # 检测TCP存活
-      # ======================
+      # ==========================
+      # TCP初筛
+      # ==========================
 
       - name: Check nodes
 
@@ -101,11 +119,11 @@ jobs:
 
 
 
-      # ======================
-      # 延迟测速排序
-      # ======================
+      # ==========================
+      # 真实代理测速
+      # ==========================
 
-      - name: Speed test nodes
+      - name: Real proxy test
 
         run: |
 
@@ -115,9 +133,9 @@ jobs:
 
 
 
-      # ======================
-      # 生成订阅
-      # ======================
+      # ==========================
+      # 生成V2RayN订阅
+      # ==========================
 
       - name: Generate subscription
 
@@ -129,58 +147,69 @@ jobs:
 
 
 
-      # ======================
-      # 查看生成结果
-      # ======================
+      # ==========================
+      # 检查结果
+      # ==========================
 
-      - name: Check output files
+      - name: Show result
 
         run: |
 
-          echo "====== 文件列表 ======"
+          echo "========== 文件 =========="
 
           ls -lh
 
 
           echo ""
 
-          echo "====== 节点数量 ======"
+          echo "========== 数量 =========="
 
 
-          echo "nodes:"
+          echo "全部节点:"
           wc -l nodes.txt || true
 
 
-          echo "alive:"
+          echo "TCP存活:"
           wc -l alive_nodes.txt || true
 
 
-          echo "best:"
+          echo "真实可用:"
           wc -l best_nodes.txt || true
 
 
-          echo "sub:"
+          echo "订阅:"
           wc -l sub.txt || true
 
 
 
 
 
-      # ======================
+      # ==========================
       # 提交更新
-      # ======================
+      # ==========================
 
       - name: Save update
+
         run: |
+
 
           git config user.name "github-actions[bot]"
 
+
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+
 
           git add nodes.txt alive_nodes.txt best_nodes.txt sub.txt hk.txt tw.txt us.txt
 
+
+
           git commit -m "auto update nodes" || exit 0
 
+
+
           git pull --rebase origin main
+
+
 
           git push origin HEAD:main
