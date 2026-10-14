@@ -1,249 +1,231 @@
-import socket
+import os
+import json
 import time
 import base64
-import json
+import subprocess
+import requests
 import concurrent.futures
-from urllib.parse import urlsplit, unquote
 
 
 INPUT = "alive_nodes.txt"
 OUTPUT = "best_nodes.txt"
 
-TIMEOUT = 3
-MAX_WORKERS = 100
+TEST_URL = "https://www.gstatic.com/generate_204"
 
-# 保留最快多少个节点
+TIMEOUT = 8
+
 MAX_RESULTS = 200
 
 
 
-def get_host_port(node):
+def decode_vmess(node):
 
     try:
 
-        node = unquote(node)
-
-
-        # =====================
-        # VMess
-        # =====================
-
-        if node.startswith("vmess://"):
-
-            data = node.replace(
-                "vmess://",
-                ""
-            )
-
-            data += "=" * (
-                (4 - len(data) % 4) % 4
-            )
-
-
-            raw = base64.urlsafe_b64decode(
-                data
-            )
-
-
-            info = json.loads(
-                raw.decode(
-                    "utf-8",
-                    errors="ignore"
-                )
-            )
-
-
-            host = (
-                info.get("add")
-                or info.get("host")
-            )
-
-
-            port = info.get("port")
-
-
-            if host and port:
-
-                return (
-                    host,
-                    int(port)
-                )
-
-
-
-        # =====================
-        # VLESS / Trojan
-        # =====================
-
-        if node.startswith(
-            (
-                "vless://",
-                "trojan://"
-            )
-        ):
-
-            parsed = urlsplit(node)
-
-
-            if parsed.hostname and parsed.port:
-
-                return (
-                    parsed.hostname,
-                    parsed.port
-                )
-
-
-
-        # =====================
-        # Shadowsocks
-        # =====================
-
-        if node.startswith("ss://"):
-
-            return parse_ss(node)
-
-
-
-    except Exception:
-
-        pass
-
-
-
-    return None, None
-
-
-
-
-def parse_ss(node):
-
-    try:
-
-        body = (
-            node[5:]
-            .split("#")[0]
-            .split("?")[0]
+        raw = node.replace(
+            "vmess://",
+            ""
         )
 
+        raw += "="*((4-len(raw)%4)%4)
 
-        # 新格式
-
-        if "@" in body:
-
-
-            server = body.rsplit(
-                "@",
-                1
-            )[1]
-
-
-            parsed = urlsplit(
-                "//" + server
-            )
-
-
-            if parsed.hostname and parsed.port:
-
-                return (
-                    parsed.hostname,
-                    parsed.port
-                )
-
-
-
-        # 老格式
-
-        body += "=" * (
-            (4 - len(body) % 4) % 4
+        return json.loads(
+            base64.b64decode(raw).decode()
         )
 
-
-        decoded = base64.urlsafe_b64decode(
-            body
-        ).decode(
-            "utf-8",
-            errors="ignore"
-        )
-
-
-        if "@" in decoded:
-
-
-            server = decoded.rsplit(
-                "@",
-                1
-            )[1]
-
-
-            host, port = server.rsplit(
-                ":",
-                1
-            )
-
-
-            return (
-                host,
-                int(port)
-            )
-
-
-
-    except Exception:
-
-        pass
-
-
-
-    return None, None
-
-
-
-
-def test_node(node):
-
-    host, port = get_host_port(node)
-
-
-    if not host or not port:
+    except:
 
         return None
 
 
 
+def make_config(node, port):
+
+    """
+    生成 sing-box 配置
+    """
+
+    outbound = None
+
+
+    if node.startswith("vmess://"):
+
+        v = decode_vmess(node)
+
+        if not v:
+            return None
+
+
+        outbound = {
+
+            "type":"vmess",
+
+            "server":v["add"],
+
+            "server_port":int(v["port"]),
+
+            "uuid":v["id"],
+
+            "security":"auto"
+
+        }
+
+
+
+    elif node.startswith("vless://"):
+
+        outbound = {
+
+            "type":"vless",
+
+            "server":node.split("@")[1].split(":")[0],
+
+            "server_port":443
+
+        }
+
+
+    else:
+
+        return None
+
+
+
+    return {
+
+        "log":{
+
+            "level":"error"
+
+        },
+
+
+        "inbounds":[
+
+            {
+
+            "type":"socks",
+
+            "listen":"127.0.0.1",
+
+            "listen_port":port
+
+            }
+
+        ],
+
+
+        "outbounds":[
+
+            outbound
+
+        ]
+
+    }
+
+
+
+def test(node):
+
+    port=20800
+
+
+    config=make_config(
+        node,
+        port
+    )
+
+
+    if not config:
+
+        return None
+
+
+
+    filename="test.json"
+
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            config,
+            f
+        )
+
+
+
     try:
 
+        process=subprocess.Popen(
 
-        start = time.time()
+            [
+                "sing-box",
+                "run",
+                "-c",
+                filename
+            ],
+
+            stdout=subprocess.DEVNULL,
+
+            stderr=subprocess.DEVNULL
+
+        )
 
 
-        sock = socket.create_connection(
-            (
-                host,
-                port
-            ),
+        time.sleep(2)
+
+
+
+        start=time.time()
+
+
+        r=requests.get(
+
+            TEST_URL,
+
+            proxies={
+
+                "http":
+                f"socks5://127.0.0.1:{port}",
+
+                "https":
+                f"socks5://127.0.0.1:{port}"
+
+            },
+
             timeout=TIMEOUT
+
         )
 
 
-        sock.close()
+        delay=int(
 
+            (time.time()-start)*1000
 
-        delay = int(
-            (time.time() - start)
-            * 1000
         )
 
 
-        return (
-            delay,
-            node
-        )
+        process.kill()
 
 
 
-    except Exception:
+        if r.status_code in [200,204]:
 
-        return None
+            return delay,node
+
+
+
+    except:
+
+        pass
+
+
+
+    return None
 
 
 
@@ -252,88 +234,63 @@ def test_node(node):
 def main():
 
 
-    try:
-
-        with open(
-            INPUT,
-            encoding="utf-8"
-        ) as f:
-
-
-            nodes = list(
-                dict.fromkeys(
-                    line.strip()
-                    for line in f
-                    if line.strip()
-                )
-            )
-
-
-    except FileNotFoundError:
-
-
-        print(
-            "找不到",
-            INPUT
-        )
-
+    if not os.path.exists(INPUT):
 
         open(
             OUTPUT,
             "w"
         ).close()
 
-
         return
 
 
 
+    with open(
+        INPUT,
+        encoding="utf-8"
+    ) as f:
+
+        nodes=[
+
+            x.strip()
+
+            for x in f
+
+            if x.strip()
+
+        ]
+
+
 
     print(
-        "测速节点:",
+        "真实检测节点:",
         len(nodes)
     )
 
 
 
-    results = []
+    results=[]
 
 
 
     with concurrent.futures.ThreadPoolExecutor(
-        max_workers=MAX_WORKERS
+
+        max_workers=10
+
     ) as pool:
 
 
-        for result in pool.map(
-            test_node,
-            nodes
-        ):
+        for r in pool.map(test,nodes):
+
+            if r:
+
+                results.append(r)
 
 
-            if result:
-
-                results.append(
-                    result
-                )
-
-
-
-
-    # 延迟排序
 
     results.sort(
         key=lambda x:x[0]
     )
-
-
-
-    # 保留最快节点
-
-    results = results[
-        :MAX_RESULTS
-    ]
-
 
 
     with open(
@@ -343,45 +300,30 @@ def main():
     ) as f:
 
 
-        for delay,node in results:
+        for delay,node in results[:MAX_RESULTS]:
 
             f.write(
-                node + "\n"
+                node+"\n"
             )
 
 
 
-
     print(
-        "测速完成"
-    )
-
-
-    print(
-        "有效节点:",
+        "真实可用:",
         len(results)
     )
-
 
 
     if results:
 
         print(
-            "最快延迟:",
+            "最低延迟:",
             results[0][0],
             "ms"
         )
 
-    else:
-
-        print(
-            "没有找到可用节点"
-        )
 
 
-
-
-
-if __name__ == "__main__":
+if __name__=="__main__":
 
     main()
