@@ -165,8 +165,7 @@ print("节点数量:",len(nodes))
 print("================")
 
 
-
-# 保存节点
+# 保存全部节点
 
 with open(
     "nodes.txt",
@@ -180,16 +179,73 @@ with open(
 
 
 
-# 生成Base64订阅
-
-subscription=base64.b64encode(
-
-    "\n".join(nodes)
-    .encode()
-
-).decode()
+# ==========================
+# 地区分类
+# ==========================
 
 
+regions = {
+
+
+    "hk.txt":[
+
+        "HK",
+        "HKG",
+        "Hong",
+        "HongKong",
+        "香港",
+        "🇭🇰"
+
+    ],
+
+
+    "tw.txt":[
+
+        "TW",
+        "TWN",
+        "Taiwan",
+        "Taipei",
+        "台湾",
+        "台北",
+        "🇹🇼"
+
+    ],
+
+
+    "us.txt":[
+
+        "US",
+        "USA",
+        "America",
+        "United States",
+        "Los",
+        "LA",
+        "New York",
+        "NY",
+        "Seattle",
+        "Dallas",
+        "美国",
+        "🇺🇸"
+
+    ]
+
+}
+
+
+
+def make_sub(node_list):
+
+
+    data="\n".join(node_list)
+
+
+    return base64.b64encode(
+        data.encode()
+    ).decode()
+
+
+
+# 生成全部订阅
 
 with open(
     "sub.txt",
@@ -197,8 +253,56 @@ with open(
     encoding="utf-8"
 ) as f:
 
-    f.write(subscription)
+    f.write(
+        make_sub(nodes)
+    )
 
 
 
-print("生成订阅完成")
+# 生成地区订阅
+
+for filename, keys in regions.items():
+
+
+    selected=[]
+
+
+    for node in nodes:
+
+
+        for key in keys:
+
+
+            if key.lower() in node.lower():
+
+                selected.append(node)
+
+                break
+
+
+
+    selected=list(
+        dict.fromkeys(selected)
+    )
+
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        f.write(
+            make_sub(selected)
+        )
+
+
+    print(
+        filename,
+        "节点数量:",
+        len(selected)
+    )
+
+
+
+print("全部订阅生成完成")
