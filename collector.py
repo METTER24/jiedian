@@ -1,70 +1,72 @@
 import requests
 import base64
 import re
-import time
 
 
-# 多个公开订阅源
+# ==========================
+# 节点来源
+# ==========================
+
 SOURCES = [
 
-# free-nodes
+    # free-nodes
+    "https://raw.githubusercontent.com/free-nodes/v2rayfree/main/sub",
 
-"https://raw.githubusercontent.com/free-nodes/v2rayfree/main/sub",
+    # aiboboxx
+    "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
 
-
-# aiboboxx
-
-"https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2",
-
-"https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2raysub",
+    "https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2raysub",
 
 
-# nodefree
-
-"https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt",
-
-
-# clash订阅合集
-
-"https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/list_raw.txt",
+    # NoMoreWalls
+    "https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/list_raw.txt",
 
 
-# Pawdroid
+    # Free servers
+    "https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
 
-"https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
 
-
-# 其他公开源
-
-"https://raw.githubusercontent.com/learnhard-cn/free_proxy_ss/main/v2ray",
+    # V2RayAggregator
+    "https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt",
 
 ]
 
-def get_source(url):
+
+# ==========================
+# 下载订阅
+# ==========================
+
+def download(url):
 
     try:
 
-        print("抓取:", url)
+        print("正在抓取:", url)
 
         r=requests.get(
             url,
-            timeout=20,
+            timeout=15,
             headers={
                 "User-Agent":"Mozilla/5.0"
             }
         )
 
-        if r.status_code==200:
+        if r.status_code == 200:
 
             return r.text
 
+
     except Exception as e:
 
-        print(e)
+        print("失败:",e)
+
 
     return ""
 
 
+
+# ==========================
+# Base64解码
+# ==========================
 
 def decode_base64(text):
 
@@ -72,11 +74,7 @@ def decode_base64(text):
 
         text=text.strip()
 
-        missing=len(text)%4
-
-        if missing:
-
-            text += "="*(4-missing)
+        text += "="*((4-len(text)%4)%4)
 
 
         return base64.b64decode(
@@ -90,76 +88,85 @@ def decode_base64(text):
     except:
 
         return ""
-这样很多：
-
-vmess://
-vless://
-ss://
-trojan://
-
-
-def extract_nodes(text):
-
-    nodes=[]
-
-
-    # 解码可能存在的base64订阅
-
-    text += "\n"+decode_base64(text)
 
 
 
-    patterns=[
+# ==========================
+# 提取节点
+# ==========================
 
-        r"vmess://\S+",
+def extract(text):
 
-        r"vless://\S+",
+    result=[]
 
-        r"trojan://\S+",
 
-        r"ss://\S+"
+    # 尝试解码
+
+    text=text+"\n"+decode_base64(text)
+
+
+    rules=[
+
+        r"vmess://[^\s]+",
+
+        r"vless://[^\s]+",
+
+        r"trojan://[^\s]+",
+
+        r"ss://[^\s]+"
 
     ]
 
 
-    for p in patterns:
+    for rule in rules:
 
-        result=re.findall(
-            p,
-            text
+        result.extend(
+            re.findall(
+                rule,
+                text
+            )
         )
 
-        nodes.extend(result)
+
+    return result
 
 
 
-    return nodes
+# ==========================
+# 主程序
+# ==========================
+
+
+nodes=[]
+
+
+for source in SOURCES:
+
+    data=download(source)
+
+    if data:
+
+        nodes.extend(
+            extract(data)
+        )
 
 
 
-all_nodes=[]
+# 去重 保留顺序
 
-
-for url in SOURCES:
-
-    data=get_source(url)
-
-    all_nodes.extend(
-        extract_nodes(data)
-    )
-
-
-# 去重，保持顺序
-all_nodes = list(dict.fromkeys(all_nodes))
-
-
-print(
-    "总节点:",
-    len(all_nodes)
+nodes=list(
+    dict.fromkeys(nodes)
 )
 
 
-# 保存原始节点
+
+print("================")
+print("节点数量:",len(nodes))
+print("================")
+
+
+
+# 保存节点
 
 with open(
     "nodes.txt",
@@ -168,16 +175,16 @@ with open(
 ) as f:
 
     f.write(
-        "\n".join(all_nodes)
+        "\n".join(nodes)
     )
 
 
 
-# 生成订阅
+# 生成Base64订阅
 
-sub=base64.b64encode(
+subscription=base64.b64encode(
 
-    "\n".join(all_nodes)
+    "\n".join(nodes)
     .encode()
 
 ).decode()
@@ -190,8 +197,8 @@ with open(
     encoding="utf-8"
 ) as f:
 
-    f.write(sub)
+    f.write(subscription)
 
 
 
-print("完成")
+print("生成订阅完成")
